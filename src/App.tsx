@@ -210,13 +210,6 @@ export default function App() {
           </div>
         )}
       </AnimatePresence>
-
-      {loading && (
-        <div className="fixed bottom-8 right-8 bg-white border border-black/10 rounded-full px-6 py-3 shadow-xl z-[200] flex items-center gap-3 animate-pulse">
-          <div className="w-2 h-2 bg-black rounded-full animate-bounce" />
-          <span className="text-sm font-medium">AI is thinking...</span>
-        </div>
-      )}
     </div>
   );
 }
