@@ -13,7 +13,11 @@ import {
   Upload,
   ExternalLink,
   Scissors,
-  Table
+  Table,
+  Type as TypeIcon,
+  Pencil,
+  RotateCcw,
+  Eraser
 } from 'lucide-react';
 import { ScrapbookItem, ItemType } from './types';
 import { tagItem, semanticSearch, stickerifyImage } from './services/gemini';
@@ -31,7 +35,12 @@ export default function App() {
   const [searchResults, setSearchResults] = useState<string[] | null>(null);
   const [isAdding, setIsAdding] = useState<ItemType | null>(null);
   const [loading, setLoading] = useState(false);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [isEraser, setIsEraser] = useState(false);
+  const [brushColor, setBrushColor] = useState('#9B8E7E'); // Morandi Taupe
   const canvasRef = useRef<HTMLDivElement>(null);
+  const drawingCanvasRef = useRef<HTMLCanvasElement>(null);
+  const [isMouseDown, setIsMouseDown] = useState(false);
 
   useEffect(() => {
     fetchItems();
@@ -117,6 +126,78 @@ export default function App() {
     });
   };
 
+  const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
+    setIsMouseDown(true);
+    const canvas = drawingCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = ('touches' in e) ? e.touches[0].clientX - rect.left : (e as React.MouseEvent).clientX - rect.left;
+    const y = ('touches' in e) ? e.touches[0].clientY - rect.top : (e as React.MouseEvent).clientY - rect.top;
+
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.strokeStyle = isEraser ? '#000' : brushColor;
+    ctx.globalCompositeOperation = isEraser ? 'destination-out' : 'source-over';
+    ctx.lineWidth = isEraser ? 20 : 4;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+  };
+
+  const draw = (e: React.MouseEvent | React.TouchEvent) => {
+    if (!isMouseDown) return;
+    const canvas = drawingCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = ('touches' in e) ? e.touches[0].clientX - rect.left : (e as React.MouseEvent).clientX - rect.left;
+    const y = ('touches' in e) ? e.touches[0].clientY - rect.top : (e as React.MouseEvent).clientY - rect.top;
+
+    ctx.lineTo(x, y);
+    ctx.stroke();
+  };
+
+  const stopDrawing = () => {
+    setIsMouseDown(false);
+  };
+
+  const clearDrawing = () => {
+    const canvas = drawingCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  };
+
+  const saveDrawing = async () => {
+    const canvas = drawingCanvasRef.current;
+    if (!canvas) return;
+    
+    // Check if canvas is empty (optional but good)
+    const dataUrl = canvas.toDataURL('image/png');
+    
+    // Upload the drawing
+    const blob = await (await fetch(dataUrl)).blob();
+    const file = new File([blob], "drawing.png", { type: "image/png" });
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch('/api/upload', {
+      method: 'POST',
+      body: formData,
+    });
+    const { file_path } = await res.json();
+    
+    handleAddItem('drawing', { file_path, title: 'My Drawing' });
+    setIsDrawing(false);
+    setIsEraser(false);
+    clearDrawing();
+  };
+
   const exportToCSV = () => {
     if (items.length === 0) return;
 
@@ -175,6 +256,59 @@ export default function App() {
               <Star size={20} fill="currentColor" />
             </button>
             <div className="w-[1px] h-6 bg-black/10 mx-1 self-center" />
+            <button onClick={() => setIsAdding('text')} className="p-2 hover:bg-black/5 rounded-full transition-colors text-purple-500" title="Add Cute Text">
+              <TypeIcon size={20} />
+            </button>
+            <div className="flex items-center gap-1 ml-2">
+              <button 
+                onClick={() => {
+                  setIsDrawing(!isDrawing);
+                  if (!isDrawing) setIsEraser(false);
+                }} 
+                className={cn(
+                  "p-2 rounded-full transition-all",
+                  isDrawing ? "bg-black text-white scale-110" : "hover:bg-black/5 text-blue-500"
+                )} 
+                title="Brush Tool"
+              >
+                <Pencil size={20} />
+              </button>
+              {isDrawing && (
+                <div className="flex gap-1 ml-1 animate-in slide-in-from-left-2">
+                  {['#9B8E7E', '#B8C4BB', '#D6C5C1', '#8E9775', '#6D8299'].map(color => (
+                    <button 
+                      key={color}
+                      onClick={() => {
+                        setBrushColor(color);
+                        setIsEraser(false);
+                      }}
+                      className={cn(
+                        "w-6 h-6 rounded-full border-2 transition-transform",
+                        (!isEraser && brushColor === color) ? "border-black scale-125" : "border-transparent"
+                      )}
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                  <button 
+                    onClick={() => setIsEraser(!isEraser)} 
+                    className={cn(
+                      "p-1 rounded-full transition-all",
+                      isEraser ? "bg-black text-white" : "hover:bg-black/5 text-black/60"
+                    )}
+                    title="Eraser"
+                  >
+                    <Eraser size={16} />
+                  </button>
+                  <button onClick={clearDrawing} className="p-1 hover:bg-black/5 rounded-full" title="Clear All">
+                    <RotateCcw size={16} />
+                  </button>
+                  <button onClick={saveDrawing} className="px-2 py-1 bg-black text-white text-[10px] font-bold rounded-md ml-1">
+                    DONE
+                  </button>
+                </div>
+              )}
+            </div>
+            <div className="w-[1px] h-6 bg-black/10 mx-1 self-center" />
             <button onClick={exportToCSV} className="p-2 hover:bg-black/5 rounded-full transition-colors text-emerald-600" title="Export to CSV">
               <Table size={20} />
             </button>
@@ -203,6 +337,22 @@ export default function App() {
       <main className="flex-1 relative overflow-auto p-20" ref={canvasRef}>
         <div className="absolute inset-0 pointer-events-none opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
         
+        {isDrawing && (
+          <canvas
+            ref={drawingCanvasRef}
+            width={window.innerWidth * 2}
+            height={window.innerHeight * 2}
+            className="absolute inset-0 z-[60] cursor-crosshair touch-none"
+            onMouseDown={startDrawing}
+            onMouseMove={draw}
+            onMouseUp={stopDrawing}
+            onMouseLeave={stopDrawing}
+            onTouchStart={startDrawing}
+            onTouchMove={draw}
+            onTouchEnd={stopDrawing}
+          />
+        )}
+
         <div className="relative w-full h-full min-h-[2000px] min-w-[2000px]">
           {items.map((item) => {
             const isSearchResult = searchResults?.includes(item.id);
@@ -213,7 +363,11 @@ export default function App() {
                 key={item.id} 
                 item={item} 
                 onDelete={() => deleteItem(item.id)}
-                onUpdate={(updates) => saveItem({ ...item, ...updates })}
+                onUpdate={(updates) => {
+                  // Optimistic update
+                  setItems(prev => prev.map(i => i.id === item.id ? { ...i, ...updates } : i));
+                  saveItem({ ...item, ...updates });
+                }}
                 isDimmed={isDimmed}
                 isHighlighted={isSearchResult}
               />
@@ -241,6 +395,7 @@ export default function App() {
 
               {isAdding === 'note' && <NoteForm onSubmit={(data) => handleAddItem('note', data)} />}
               {isAdding === 'link' && <LinkForm onSubmit={(data) => handleAddItem('link', data)} />}
+              {isAdding === 'text' && <TextForm onSubmit={(data) => handleAddItem('text', data)} />}
             </motion.div>
           </div>
         )}
@@ -300,7 +455,22 @@ function ScrapbookItemComponent({ item, onDelete, onUpdate, isDimmed, isHighligh
     >
       <div className="relative">
         {/* Controls */}
-        <div className="absolute -top-4 -right-4 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-20">
+        <div 
+          className="absolute -top-6 -right-6 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-[110] cursor-default"
+          onPointerDownCapture={(e) => e.stopPropagation()}
+          onMouseDownCapture={(e) => e.stopPropagation()}
+          onClickCapture={(e) => e.stopPropagation()}
+        >
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              onUpdate({ rotation: (item.rotation + 15) % 360 });
+            }}
+            className="p-1.5 bg-white shadow-lg rounded-full hover:bg-black hover:text-white transition-colors border border-black/5"
+            title="Rotate"
+          >
+            <RotateCcw size={14} />
+          </button>
           {item.type === 'sticker' && item.file_path && (
             <button onClick={handleStickerify} className="p-1.5 bg-white shadow-md rounded-full hover:bg-black hover:text-white transition-colors">
               <Scissors size={14} />
@@ -312,6 +482,21 @@ function ScrapbookItemComponent({ item, onDelete, onUpdate, isDimmed, isHighligh
         </div>
 
         {/* Content */}
+        {item.type === 'text' && (
+          <div className="font-cute text-3xl p-4 min-w-[100px] text-center select-none hover:bg-black/5 rounded-lg transition-colors">
+            {item.content}
+          </div>
+        )}
+
+        {item.type === 'drawing' && item.file_path && (
+          <img 
+            src={item.file_path} 
+            alt="Drawing" 
+            className="max-w-[400px] h-auto pointer-events-none select-none"
+            referrerPolicy="no-referrer"
+          />
+        )}
+
         {item.type === 'note' && (
           <div className="bg-white p-6 shadow-xl border border-black/5 min-w-[250px] max-w-[400px] rounded-sm transform hover:scale-[1.02] transition-transform">
             <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-6 bg-yellow-200/50 backdrop-blur-sm border border-yellow-300/30 rotate-2" />
@@ -386,6 +571,29 @@ function ScrapbookItemComponent({ item, onDelete, onUpdate, isDimmed, isHighligh
         )}
       </div>
     </motion.div>
+  );
+}
+
+function TextForm({ onSubmit }: { onSubmit: (data: any) => void }) {
+  const [text, setText] = useState('');
+
+  return (
+    <div className="flex flex-col gap-4">
+      <input 
+        type="text" 
+        placeholder="Type something cute..." 
+        className="w-full text-3xl font-cute border-b border-black/10 py-4 outline-none focus:border-black transition-colors text-center"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        autoFocus
+      />
+      <button 
+        onClick={() => onSubmit({ content: text })}
+        className="w-full py-4 bg-black text-white rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-black/80 transition-all active:scale-95"
+      >
+        <Save size={20} /> Add Text
+      </button>
+    </div>
   );
 }
 

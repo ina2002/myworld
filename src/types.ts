@@ -1,4 +1,4 @@
-export type ItemType = 'note' | 'link' | 'sticker' | 'pdf';
+export type ItemType = 'note' | 'link' | 'sticker' | 'pdf' | 'text' | 'drawing';
 
 export interface ScrapbookItem {
   id: string;
@@ -11,6 +11,8 @@ export interface ScrapbookItem {
   y: number;
   rotation: number;
   scale: number;
+  width?: number;
+  variant?: string;
   file_path?: string;
   created_at?: string;
 }

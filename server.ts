@@ -30,10 +30,20 @@ db.exec(`
     y REAL,
     rotation REAL,
     scale REAL,
+    width REAL,
+    variant TEXT,
     file_path TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )
 `);
+
+// Migration for existing databases
+try {
+  db.prepare("ALTER TABLE items ADD COLUMN width REAL").run();
+  db.prepare("ALTER TABLE items ADD COLUMN variant TEXT").run();
+} catch (e) {
+  // Columns already exist
+}
 
 app.use(express.json({ limit: '50mb' }));
 
@@ -57,12 +67,12 @@ app.get("/api/items", (req, res) => {
 });
 
 app.post("/api/items", (req, res) => {
-  const { id, type, content, title, rating, tags, x, y, rotation, scale, file_path } = req.body;
+  const { id, type, content, title, rating, tags, x, y, rotation, scale, width, variant, file_path } = req.body;
   const stmt = db.prepare(`
-    INSERT OR REPLACE INTO items (id, type, content, title, rating, tags, x, y, rotation, scale, file_path)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT OR REPLACE INTO items (id, type, content, title, rating, tags, x, y, rotation, scale, width, variant, file_path)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
-  stmt.run(id, type, content, title, rating, JSON.stringify(tags || []), x, y, rotation, scale, file_path);
+  stmt.run(id, type, content, title, rating, JSON.stringify(tags || []), x, y, rotation, scale, width, variant, file_path);
   res.json({ success: true });
 });
 
