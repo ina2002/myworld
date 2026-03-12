@@ -17,7 +17,9 @@ import {
   Type as TypeIcon,
   Pencil,
   RotateCcw,
-  Eraser
+  RefreshCw,
+  Eraser,
+  RotateCcw as ResetIcon
 } from 'lucide-react';
 import { ScrapbookItem, ItemType } from './types';
 import { tagItem, semanticSearch, stickerifyImage } from './services/gemini';
@@ -425,7 +427,11 @@ function ScrapbookItemComponent({ item, onDelete, onUpdate, isDimmed, isHighligh
       reader.onloadend = async () => {
         const base64 = (reader.result as string).split(',')[1];
         const { path } = await stickerifyImage(base64);
-        onUpdate({ clip_path: `polygon(${path})` });
+        if (path === "0% 0%, 100% 0%, 100% 100%, 0% 100%") {
+          alert("AI 识别失败，请尝试换一张主体更明确的图片。");
+        } else {
+          onUpdate({ clip_path: `polygon(${path})` });
+        }
         setIsStickerifying(false);
       };
       reader.readAsDataURL(blob);
@@ -486,6 +492,18 @@ function ScrapbookItemComponent({ item, onDelete, onUpdate, isDimmed, isHighligh
               )}
             >
               <Scissors size={16} className={cn("md:w-[14px] md:h-[14px]", isStickerifying && "animate-spin")} />
+            </button>
+          )}
+          {item.clip_path && (
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                onUpdate({ clip_path: undefined });
+              }} 
+              className="p-2 md:p-1.5 bg-white shadow-md rounded-full hover:bg-black hover:text-white transition-colors"
+              title="Reset Crop"
+            >
+              <RefreshCw size={16} className="md:w-[14px] md:h-[14px]" />
             </button>
           )}
           <button 
