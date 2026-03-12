@@ -233,7 +233,7 @@ export default function App() {
       item.rating || '',
       item.file_path || ''
     ]);
-
+IdeaGarden by Tina
     const csvContent = [
       headers.join(','),
       ...rows.map(row => row.join(','))
@@ -255,7 +255,7 @@ export default function App() {
       {/* Header */}
       <header className="p-4 md:p-6 border-b border-black/10 flex flex-col lg:flex-row gap-4 justify-between items-center bg-white/50 backdrop-blur-md z-50">
         <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 w-full lg:w-auto">
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight italic">IdeaScrapbook</h1>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight italic">IdeaGarden by Tina</h1>
           <div className="hidden sm:block h-8 w-[1px] bg-black/10 mx-2" />
           <div className="flex flex-wrap justify-center gap-1 md:gap-2">
             <button onClick={() => setIsAdding('note')} className="p-2 hover:bg-black/5 rounded-full transition-colors" title="Add Note">
