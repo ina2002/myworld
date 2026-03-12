@@ -12,7 +12,8 @@ import {
   Save,
   Upload,
   ExternalLink,
-  Scissors
+  Scissors,
+  Table
 } from 'lucide-react';
 import { ScrapbookItem, ItemType } from './types';
 import { tagItem, semanticSearch, stickerifyImage } from './services/gemini';
@@ -63,7 +64,7 @@ export default function App() {
       type,
       x: Math.random() * 200 + 100,
       y: Math.random() * 200 + 100,
-      rotation: (Math.random() - 0.5) * 20,
+      rotation: 0,
       scale: 1,
       tags: [],
       ...data,
@@ -116,6 +117,36 @@ export default function App() {
     });
   };
 
+  const exportToCSV = () => {
+    if (items.length === 0) return;
+
+    const headers = ['ID', 'Type', 'Title', 'Content', 'Tags', 'Rating', 'File Path'];
+    const rows = items.map(item => [
+      item.id,
+      item.type,
+      `"${(item.title || '').replace(/"/g, '""')}"`,
+      `"${(item.content || '').replace(/"/g, '""')}"`,
+      `"${(item.tags || []).join(', ')}"`,
+      item.rating || '',
+      item.file_path || ''
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `scrapbook_export_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="min-h-screen bg-[#F5F2ED] text-[#1A1A1A] font-serif overflow-hidden flex flex-col">
       {/* Header */}
@@ -142,6 +173,10 @@ export default function App() {
             </label>
             <button onClick={addStar} className="p-2 hover:bg-black/5 rounded-full transition-colors text-yellow-500" title="Add Star">
               <Star size={20} fill="currentColor" />
+            </button>
+            <div className="w-[1px] h-6 bg-black/10 mx-1 self-center" />
+            <button onClick={exportToCSV} className="p-2 hover:bg-black/5 rounded-full transition-colors text-emerald-600" title="Export to CSV">
+              <Table size={20} />
             </button>
           </div>
         </div>
@@ -256,7 +291,7 @@ function ScrapbookItemComponent({ item, onDelete, onUpdate, isDimmed, isHighligh
         rotate: item.rotation, 
         scale: isHighlighted ? item.scale * 1.1 : item.scale,
         opacity: isDimmed ? 0.3 : 1,
-        zIndex: isHighlighted ? 50 : 10
+        zIndex: isHighlighted ? 100 : (item.content === '⭐' ? 80 : 10)
       }}
       className={cn(
         "absolute cursor-grab active:cursor-grabbing group",
@@ -318,7 +353,7 @@ function ScrapbookItemComponent({ item, onDelete, onUpdate, isDimmed, isHighligh
           <div className="relative group">
             {item.file_path ? (
               <div 
-                className="bg-white p-2 shadow-2xl rounded-sm rotate-1"
+                className="bg-white p-2 shadow-2xl rounded-sm"
                 style={{ clipPath: clipPath || 'none' }}
               >
                 <img 
