@@ -231,11 +231,11 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#F5F2ED] text-[#1A1A1A] font-serif overflow-hidden flex flex-col">
       {/* Header */}
-      <header className="p-6 border-b border-black/10 flex justify-between items-center bg-white/50 backdrop-blur-md z-50">
-        <div className="flex items-center gap-4">
-          <h1 className="text-3xl font-bold tracking-tight italic">IdeaScrapbook</h1>
-          <div className="h-8 w-[1px] bg-black/10 mx-2" />
-          <div className="flex gap-2">
+      <header className="p-4 md:p-6 border-b border-black/10 flex flex-col lg:flex-row gap-4 justify-between items-center bg-white/50 backdrop-blur-md z-50">
+        <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 w-full lg:w-auto">
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight italic">IdeaScrapbook</h1>
+          <div className="hidden sm:block h-8 w-[1px] bg-black/10 mx-2" />
+          <div className="flex flex-wrap justify-center gap-1 md:gap-2">
             <button onClick={() => setIsAdding('note')} className="p-2 hover:bg-black/5 rounded-full transition-colors" title="Add Note">
               <FileText size={20} />
             </button>
@@ -259,7 +259,7 @@ export default function App() {
             <button onClick={() => setIsAdding('text')} className="p-2 hover:bg-black/5 rounded-full transition-colors text-purple-500" title="Add Cute Text">
               <TypeIcon size={20} />
             </button>
-            <div className="flex items-center gap-1 ml-2">
+            <div className="flex items-center gap-1 ml-1 md:ml-2">
               <button 
                 onClick={() => {
                   setIsDrawing(!isDrawing);
@@ -274,7 +274,7 @@ export default function App() {
                 <Pencil size={20} />
               </button>
               {isDrawing && (
-                <div className="flex gap-1 ml-1 animate-in slide-in-from-left-2">
+                <div className="flex flex-wrap items-center gap-1 ml-1 animate-in slide-in-from-left-2 bg-white/80 p-1 rounded-xl shadow-sm">
                   {['#9B8E7E', '#B8C4BB', '#D6C5C1', '#8E9775', '#6D8299'].map(color => (
                     <button 
                       key={color}
@@ -283,7 +283,7 @@ export default function App() {
                         setIsEraser(false);
                       }}
                       className={cn(
-                        "w-6 h-6 rounded-full border-2 transition-transform",
+                        "w-5 h-5 md:w-6 md:h-6 rounded-full border-2 transition-transform",
                         (!isEraser && brushColor === color) ? "border-black scale-125" : "border-transparent"
                       )}
                       style={{ backgroundColor: color }}
@@ -315,18 +315,18 @@ export default function App() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 bg-white border border-black/10 rounded-full px-4 py-1 shadow-sm">
-          <Search size={18} className="text-black/40" />
+        <div className="flex items-center gap-2 bg-white border border-black/10 rounded-full px-4 py-1 shadow-sm w-full sm:w-auto">
+          <Search size={18} className="text-black/40 shrink-0" />
           <input 
             type="text" 
             placeholder="Search ideas, skills, PDFs..." 
-            className="bg-transparent outline-none w-64 text-sm py-1"
+            className="bg-transparent outline-none w-full sm:w-64 text-sm py-1"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
           />
           {searchQuery && (
-            <button onClick={() => { setSearchQuery(''); setSearchResults(null); }} className="text-black/40 hover:text-black">
+            <button onClick={() => { setSearchQuery(''); setSearchResults(null); }} className="text-black/40 hover:text-black shrink-0">
               <X size={14} />
             </button>
           )}
@@ -334,14 +334,14 @@ export default function App() {
       </header>
 
       {/* Main Canvas */}
-      <main className="flex-1 relative overflow-auto p-20" ref={canvasRef}>
+      <main className="flex-1 relative overflow-auto p-4 md:p-20" ref={canvasRef}>
         <div className="absolute inset-0 pointer-events-none opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
         
         {isDrawing && (
           <canvas
             ref={drawingCanvasRef}
-            width={window.innerWidth * 2}
-            height={window.innerHeight * 2}
+            width={Math.max(window.innerWidth * 2, 2000)}
+            height={Math.max(window.innerHeight * 2, 2000)}
             className="absolute inset-0 z-[60] cursor-crosshair touch-none"
             onMouseDown={startDrawing}
             onMouseMove={draw}
@@ -456,28 +456,39 @@ function ScrapbookItemComponent({ item, onDelete, onUpdate, isDimmed, isHighligh
       <div className="relative">
         {/* Controls */}
         <div 
-          className="absolute -top-6 -right-6 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-[110] cursor-default"
+          className="absolute -top-8 -right-8 md:-top-6 md:-right-6 flex gap-1 opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity z-[110] cursor-default"
           onPointerDownCapture={(e) => e.stopPropagation()}
           onMouseDownCapture={(e) => e.stopPropagation()}
-          onClickCapture={(e) => e.stopPropagation()}
         >
           <button 
             onClick={(e) => {
               e.stopPropagation();
               onUpdate({ rotation: (item.rotation + 15) % 360 });
             }}
-            className="p-1.5 bg-white shadow-lg rounded-full hover:bg-black hover:text-white transition-colors border border-black/5"
+            className="p-2 md:p-1.5 bg-white shadow-lg rounded-full hover:bg-black hover:text-white transition-colors border border-black/5"
             title="Rotate"
           >
-            <RotateCcw size={14} />
+            <RotateCcw size={16} className="md:w-[14px] md:h-[14px]" />
           </button>
           {item.type === 'sticker' && item.file_path && (
-            <button onClick={handleStickerify} className="p-1.5 bg-white shadow-md rounded-full hover:bg-black hover:text-white transition-colors">
-              <Scissors size={14} />
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                handleStickerify();
+              }} 
+              className="p-2 md:p-1.5 bg-white shadow-md rounded-full hover:bg-black hover:text-white transition-colors"
+            >
+              <Scissors size={16} className="md:w-[14px] md:h-[14px]" />
             </button>
           )}
-          <button onClick={onDelete} className="p-1.5 bg-white shadow-md rounded-full hover:bg-red-500 hover:text-white transition-colors">
-            <Trash2 size={14} />
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+            }} 
+            className="p-2 md:p-1.5 bg-white shadow-md rounded-full hover:bg-red-500 hover:text-white transition-colors"
+          >
+            <Trash2 size={16} className="md:w-[14px] md:h-[14px]" />
           </button>
         </div>
 
