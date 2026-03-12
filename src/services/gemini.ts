@@ -65,23 +65,26 @@ export async function semanticSearch(query: string, items: ScrapbookItem[]): Pro
 }
 
 export async function stickerifyImage(base64Image: string): Promise<{ path: string }> {
-  if (!ai) return { path: "0,0 100,0 100,100 0,100" }; // Return square path if no AI
+  if (!ai) return { path: "0% 0%, 100% 0%, 100% 100%, 0% 100%" }; // Return square path if no AI
   try {
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: {
         parts: [
           { inlineData: { mimeType: "image/png", data: base64Image } },
-          { text: "Identify the main object in this image and provide a simplified SVG polygon path (points only, e.g. '0,0 100,0 100,100 0,100') that tightly encloses it. This will be used as a CSS clip-path. Return ONLY the path string." }
+          { text: "Identify the main object in this image and provide a simplified SVG polygon path (points only, e.g. '10% 10%, 90% 10%, 90% 90%, 10% 90%') that tightly encloses it. Use percentages (0-100%) for coordinates. This will be used as a CSS clip-path. Return ONLY the comma-separated points string, no 'polygon()' wrapper, no extra text." }
         ]
       },
       config: {
         thinkingConfig: { thinkingLevel: ThinkingLevel.LOW }
       }
     });
-    return { path: response.text?.trim() || "0,0 100,0 100,100 0,100" };
+    let path = response.text?.trim() || "0% 0%, 100% 0%, 100% 100%, 0% 100%";
+    // Clean up if the model included 'polygon()' or other text
+    path = path.replace(/polygon\(|\)/g, "");
+    return { path };
   } catch (e) {
     console.warn("AI Stickerify failed or key missing:", e);
-    return { path: "0,0 100,0 100,100 0,100" };
+    return { path: "0% 0%, 100% 0%, 100% 100%, 0% 100%" };
   }
 }

@@ -14,5 +14,6 @@ export interface ScrapbookItem {
   width?: number;
   variant?: string;
   file_path?: string;
+  clip_path?: string;
   created_at?: string;
 }

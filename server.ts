@@ -33,6 +33,7 @@ db.exec(`
     width REAL,
     variant TEXT,
     file_path TEXT,
+    clip_path TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )
 `);
@@ -41,6 +42,7 @@ db.exec(`
 try {
   db.prepare("ALTER TABLE items ADD COLUMN width REAL").run();
   db.prepare("ALTER TABLE items ADD COLUMN variant TEXT").run();
+  db.prepare("ALTER TABLE items ADD COLUMN clip_path TEXT").run();
 } catch (e) {
   // Columns already exist
 }
@@ -67,12 +69,12 @@ app.get("/api/items", (req, res) => {
 });
 
 app.post("/api/items", (req, res) => {
-  const { id, type, content, title, rating, tags, x, y, rotation, scale, width, variant, file_path } = req.body;
+  const { id, type, content, title, rating, tags, x, y, rotation, scale, width, variant, file_path, clip_path } = req.body;
   const stmt = db.prepare(`
-    INSERT OR REPLACE INTO items (id, type, content, title, rating, tags, x, y, rotation, scale, width, variant, file_path)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT OR REPLACE INTO items (id, type, content, title, rating, tags, x, y, rotation, scale, width, variant, file_path, clip_path)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
-  stmt.run(id, type, content, title, rating, JSON.stringify(tags || []), x, y, rotation, scale, width, variant, file_path);
+  stmt.run(id, type, content, title, rating, JSON.stringify(tags || []), x, y, rotation, scale, width, variant, file_path, clip_path);
   res.json({ success: true });
 });
 

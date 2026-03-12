@@ -412,10 +412,11 @@ function ScrapbookItemComponent({ item, onDelete, onUpdate, isDimmed, isHighligh
   isHighlighted?: boolean
 }) {
   const [isEditing, setIsEditing] = useState(false);
-  const [clipPath, setClipPath] = useState<string | null>(null);
+  const [isStickerifying, setIsStickerifying] = useState(false);
 
   const handleStickerify = async () => {
     if (!item.file_path) return;
+    setIsStickerifying(true);
     try {
       // Convert image to base64 for Gemini
       const res = await fetch(item.file_path);
@@ -424,11 +425,13 @@ function ScrapbookItemComponent({ item, onDelete, onUpdate, isDimmed, isHighligh
       reader.onloadend = async () => {
         const base64 = (reader.result as string).split(',')[1];
         const { path } = await stickerifyImage(base64);
-        setClipPath(`polygon(${path})`);
+        onUpdate({ clip_path: `polygon(${path})` });
+        setIsStickerifying(false);
       };
       reader.readAsDataURL(blob);
     } catch (e) {
       console.error(e);
+      setIsStickerifying(false);
     }
   };
 
@@ -476,9 +479,13 @@ function ScrapbookItemComponent({ item, onDelete, onUpdate, isDimmed, isHighligh
                 e.stopPropagation();
                 handleStickerify();
               }} 
-              className="p-2 md:p-1.5 bg-white shadow-md rounded-full hover:bg-black hover:text-white transition-colors"
+              disabled={isStickerifying}
+              className={cn(
+                "p-2 md:p-1.5 bg-white shadow-md rounded-full transition-all",
+                isStickerifying ? "animate-pulse bg-blue-500 text-white" : "hover:bg-black hover:text-white"
+              )}
             >
-              <Scissors size={16} className="md:w-[14px] md:h-[14px]" />
+              <Scissors size={16} className={cn("md:w-[14px] md:h-[14px]", isStickerifying && "animate-spin")} />
             </button>
           )}
           <button 
@@ -549,8 +556,8 @@ function ScrapbookItemComponent({ item, onDelete, onUpdate, isDimmed, isHighligh
           <div className="relative group">
             {item.file_path ? (
               <div 
-                className="bg-white p-2 shadow-2xl rounded-sm"
-                style={{ clipPath: clipPath || 'none' }}
+                className="bg-white p-2 shadow-2xl rounded-sm transition-all duration-500"
+                style={{ clipPath: item.clip_path || 'none' }}
               >
                 <img 
                   src={item.file_path} 
