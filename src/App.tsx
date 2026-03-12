@@ -69,7 +69,7 @@ export default function App() {
       fetchItems();
     } catch (e) {
       console.error('Save error:', e);
-      alert('保存失败，请检查网络连接');
+      alert(`保存失败: ${e instanceof Error ? e.message : '未知错误'}。请检查网络或刷新页面。`);
     }
   };
 
