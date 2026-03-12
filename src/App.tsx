@@ -48,23 +48,39 @@ export default function App() {
   }, []);
 
   const fetchItems = async () => {
-    const res = await fetch('/api/items');
-    const data = await res.json();
-    setItems(data);
+    try {
+      const res = await fetch('/api/items');
+      if (!res.ok) throw new Error('Failed to fetch items');
+      const data = await res.json();
+      setItems(data);
+    } catch (e) {
+      console.error('Fetch items error:', e);
+    }
   };
 
   const saveItem = async (item: ScrapbookItem) => {
-    await fetch('/api/items', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(item),
-    });
-    fetchItems();
+    try {
+      const res = await fetch('/api/items', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(item),
+      });
+      if (!res.ok) throw new Error('Failed to save item');
+      fetchItems();
+    } catch (e) {
+      console.error('Save error:', e);
+      alert('保存失败，请检查网络连接');
+    }
   };
 
   const deleteItem = async (id: string) => {
-    await fetch(`/api/items/${id}`, { method: 'DELETE' });
-    fetchItems();
+    try {
+      const res = await fetch(`/api/items/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to delete item');
+      fetchItems();
+    } catch (e) {
+      console.error('Delete error:', e);
+    }
   };
 
   const handleAddItem = async (type: ItemType, data: Partial<ScrapbookItem>) => {
@@ -81,14 +97,18 @@ export default function App() {
     };
 
     setLoading(true);
-    if (type === 'note' || type === 'link') {
-      const tags = await tagItem(newItem.content || newItem.title || '', type);
-      newItem.tags = tags;
+    try {
+      if (type === 'note' || type === 'link') {
+        const tags = await tagItem(newItem.content || newItem.title || '', type);
+        newItem.tags = tags;
+      }
+      await saveItem(newItem);
+    } catch (e) {
+      console.error('Add item error:', e);
+    } finally {
+      setLoading(false);
+      setIsAdding(null);
     }
-    setLoading(false);
-
-    await saveItem(newItem);
-    setIsAdding(null);
   };
 
   const handleFileUpload = async (file: File, type: ItemType) => {
@@ -233,7 +253,7 @@ export default function App() {
       item.rating || '',
       item.file_path || ''
     ]);
-IdeaGarden by Tina
+
     const csvContent = [
       headers.join(','),
       ...rows.map(row => row.join(','))

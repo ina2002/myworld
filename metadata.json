@@ -1,5 +1,5 @@
 {
   "name": "IdeaGarden by Tina",
-  "description": "A playful research idea and skill notebook with sticker-style image cropping and semantic search.",
+  "description": "A playful research idea and skill notebook by Tina.",
   "requestFramePermissions": ["camera"]
 }

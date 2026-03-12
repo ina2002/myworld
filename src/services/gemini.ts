@@ -7,7 +7,7 @@ export async function tagItem(content: string, type: string): Promise<string[]> 
   if (!ai) return ["idea"]; // Return default tag if no AI
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-latest",
+      model: "gemini-3-flash-preview",
       contents: `Analyze this ${type} and provide 3-5 relevant tags for organization. 
       Content: ${content}
       Return ONLY a JSON array of strings.`,
@@ -43,7 +43,7 @@ export async function semanticSearch(query: string, items: ScrapbookItem[]): Pro
   const itemsSummary = items.map(i => ({ id: i.id, title: i.title, content: i.content, tags: i.tags }));
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-latest",
+      model: "gemini-3-flash-preview",
       contents: `User is looking for: "${query}". 
       Based on these items: ${JSON.stringify(itemsSummary)}
       Return the IDs of the most relevant items in order of relevance.
