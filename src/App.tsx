@@ -63,7 +63,7 @@ export default function App() {
       type,
       x: Math.random() * 200 + 100,
       y: Math.random() * 200 + 100,
-      rotation: (Math.random() - 0.5) * 20,
+      rotation: 0,
       scale: 1,
       tags: [],
       ...data,
@@ -256,7 +256,7 @@ function ScrapbookItemComponent({ item, onDelete, onUpdate, isDimmed, isHighligh
         rotate: item.rotation, 
         scale: isHighlighted ? item.scale * 1.1 : item.scale,
         opacity: isDimmed ? 0.3 : 1,
-        zIndex: isHighlighted ? 50 : 10
+        zIndex: isHighlighted ? 100 : (item.content === '⭐' ? 80 : 10)
       }}
       className={cn(
         "absolute cursor-grab active:cursor-grabbing group",
@@ -318,7 +318,7 @@ function ScrapbookItemComponent({ item, onDelete, onUpdate, isDimmed, isHighligh
           <div className="relative group">
             {item.file_path ? (
               <div 
-                className="bg-white p-2 shadow-2xl rounded-sm rotate-1"
+                className="bg-white p-2 shadow-2xl rounded-sm"
                 style={{ clipPath: clipPath || 'none' }}
               >
                 <img 
