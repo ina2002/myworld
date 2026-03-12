@@ -12,17 +12,15 @@ import {
   Save,
   Upload,
   ExternalLink,
-  Scissors,
   Table,
   Type as TypeIcon,
   Pencil,
   RotateCcw,
-  RefreshCw,
   Eraser,
   RotateCcw as ResetIcon
 } from 'lucide-react';
 import { ScrapbookItem, ItemType } from './types';
-import { tagItem, semanticSearch, stickerifyImage } from './services/gemini';
+import { tagItem, semanticSearch } from './services/gemini';
 import Markdown from 'react-markdown';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -38,6 +36,7 @@ export default function App() {
   const [isAdding, setIsAdding] = useState<ItemType | null>(null);
   const [loading, setLoading] = useState(false);
   const [isDrawing, setIsDrawing] = useState(false);
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [isEraser, setIsEraser] = useState(false);
   const [brushColor, setBrushColor] = useState('#9B8E7E'); // Morandi Taupe
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -93,19 +92,40 @@ export default function App() {
   };
 
   const handleFileUpload = async (file: File, type: ItemType) => {
-    const formData = new FormData();
-    formData.append('file', file);
-    const res = await fetch('/api/upload', {
-      method: 'POST',
-      body: formData,
-    });
-    const { file_path } = await res.json();
-    
-    if (type === 'sticker') {
-      // Optional: stickerify
-      handleAddItem('sticker', { file_path, title: file.name });
-    } else {
-      handleAddItem('pdf', { file_path, title: file.name });
+    console.log('Starting upload for file:', file.name, 'type:', file.type);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      console.log('Upload response status:', res.status);
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`Upload failed: ${res.status} ${errorText}`);
+      }
+      const { file_path } = await res.json();
+      console.log('File uploaded successfully:', file_path);
+      
+      if (file.type.includes('image')) {
+        handleAddItem('sticker', { file_path, title: file.name });
+      } else {
+        handleAddItem('pdf', { file_path, title: file.name });
+      }
+    } catch (e) {
+      console.error('Upload error:', e);
+      alert('上传失败，请稍后重试');
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDraggingOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      if (file.type.includes('image')) handleFileUpload(file, 'sticker');
+      else if (file.type.includes('pdf')) handleFileUpload(file, 'pdf');
     }
   };
 
@@ -336,7 +356,33 @@ export default function App() {
       </header>
 
       {/* Main Canvas */}
-      <main className="flex-1 relative overflow-auto p-4 md:p-20" ref={canvasRef}>
+      <main 
+        className="flex-1 relative overflow-auto p-4 md:p-20" 
+        ref={canvasRef}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setIsDraggingOver(true);
+        }}
+        onDragLeave={() => setIsDraggingOver(false)}
+        onDrop={handleDrop}
+      >
+        <AnimatePresence>
+          {isDraggingOver && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 z-[100] bg-black/10 backdrop-blur-[2px] flex items-center justify-center pointer-events-none"
+            >
+              <div className="bg-white p-8 rounded-3xl shadow-2xl border-2 border-dashed border-black/20 flex flex-col items-center gap-4">
+                <div className="w-16 h-16 bg-black/5 rounded-full flex items-center justify-center">
+                  <Upload size={32} className="text-black/40" />
+                </div>
+                <p className="font-bold text-lg">松开以上传图片或 PDF</p>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
         <div className="absolute inset-0 pointer-events-none opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
         
         {isDrawing && (
@@ -414,32 +460,6 @@ function ScrapbookItemComponent({ item, onDelete, onUpdate, isDimmed, isHighligh
   isHighlighted?: boolean
 }) {
   const [isEditing, setIsEditing] = useState(false);
-  const [isStickerifying, setIsStickerifying] = useState(false);
-
-  const handleStickerify = async () => {
-    if (!item.file_path) return;
-    setIsStickerifying(true);
-    try {
-      // Convert image to base64 for Gemini
-      const res = await fetch(item.file_path);
-      const blob = await res.blob();
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        const base64 = (reader.result as string).split(',')[1];
-        const { path } = await stickerifyImage(base64);
-        if (path === "0% 0%, 100% 0%, 100% 100%, 0% 100%") {
-          alert("AI 识别失败，请尝试换一张主体更明确的图片。");
-        } else {
-          onUpdate({ clip_path: `polygon(${path})` });
-        }
-        setIsStickerifying(false);
-      };
-      reader.readAsDataURL(blob);
-    } catch (e) {
-      console.error(e);
-      setIsStickerifying(false);
-    }
-  };
 
   return (
     <motion.div
@@ -479,33 +499,6 @@ function ScrapbookItemComponent({ item, onDelete, onUpdate, isDimmed, isHighligh
           >
             <RotateCcw size={16} className="md:w-[14px] md:h-[14px]" />
           </button>
-          {item.type === 'sticker' && item.file_path && (
-            <button 
-              onClick={(e) => {
-                e.stopPropagation();
-                handleStickerify();
-              }} 
-              disabled={isStickerifying}
-              className={cn(
-                "p-2 md:p-1.5 bg-white shadow-md rounded-full transition-all",
-                isStickerifying ? "animate-pulse bg-blue-500 text-white" : "hover:bg-black hover:text-white"
-              )}
-            >
-              <Scissors size={16} className={cn("md:w-[14px] md:h-[14px]", isStickerifying && "animate-spin")} />
-            </button>
-          )}
-          {item.clip_path && (
-            <button 
-              onClick={(e) => {
-                e.stopPropagation();
-                onUpdate({ clip_path: undefined });
-              }} 
-              className="p-2 md:p-1.5 bg-white shadow-md rounded-full hover:bg-black hover:text-white transition-colors"
-              title="Reset Crop"
-            >
-              <RefreshCw size={16} className="md:w-[14px] md:h-[14px]" />
-            </button>
-          )}
           <button 
             onClick={(e) => {
               e.stopPropagation();
@@ -573,10 +566,7 @@ function ScrapbookItemComponent({ item, onDelete, onUpdate, isDimmed, isHighligh
         {item.type === 'sticker' && (
           <div className="relative group">
             {item.file_path ? (
-              <div 
-                className="bg-white p-2 shadow-2xl rounded-sm transition-all duration-500"
-                style={{ clipPath: item.clip_path || 'none' }}
-              >
+              <div className="bg-white p-2 shadow-2xl rounded-sm">
                 <img 
                   src={item.file_path} 
                   alt={item.title} 

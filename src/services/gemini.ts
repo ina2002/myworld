@@ -7,7 +7,7 @@ export async function tagItem(content: string, type: string): Promise<string[]> 
   if (!ai) return ["idea"]; // Return default tag if no AI
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-3-flash-latest",
       contents: `Analyze this ${type} and provide 3-5 relevant tags for organization. 
       Content: ${content}
       Return ONLY a JSON array of strings.`,
@@ -43,7 +43,7 @@ export async function semanticSearch(query: string, items: ScrapbookItem[]): Pro
   const itemsSummary = items.map(i => ({ id: i.id, title: i.title, content: i.content, tags: i.tags }));
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-3-flash-latest",
       contents: `User is looking for: "${query}". 
       Based on these items: ${JSON.stringify(itemsSummary)}
       Return the IDs of the most relevant items in order of relevance.
@@ -61,36 +61,5 @@ export async function semanticSearch(query: string, items: ScrapbookItem[]): Pro
   } catch (e) {
     console.warn("AI Search failed or key missing:", e);
     return [];
-  }
-}
-
-export async function stickerifyImage(base64Image: string): Promise<{ path: string }> {
-  if (!ai) return { path: "0% 0%, 100% 0%, 100% 100%, 0% 100%" };
-  try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: {
-        parts: [
-          { inlineData: { mimeType: "image/png", data: base64Image } },
-          { text: "Identify the main object in this image and provide a simplified SVG polygon path (points only, e.g. '10% 10%, 90% 10%, 90% 90%, 10% 90%') that tightly encloses it. Use percentages (0-100%) for coordinates. This will be used as a CSS clip-path. Return ONLY the comma-separated points string, no 'polygon()' wrapper, no markdown, no extra text." }
-        ]
-      }
-    });
-    
-    let text = response.text || "";
-    // Clean up markdown and common AI chatter
-    text = text.replace(/```[a-z]*\n?/gi, "").replace(/```/g, "").trim();
-    text = text.replace(/polygon\(/gi, "").replace(/\)/g, "").trim();
-    
-    // Ensure it looks like a valid path (contains percentages)
-    if (!text.includes('%')) {
-      console.warn("AI returned invalid path format:", text);
-      return { path: "0% 0%, 100% 0%, 100% 100%, 0% 100%" };
-    }
-    
-    return { path: text };
-  } catch (e) {
-    console.warn("AI Stickerify failed or key missing:", e);
-    return { path: "0% 0%, 100% 0%, 100% 100%, 0% 100%" };
   }
 }
