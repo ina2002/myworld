@@ -1,8 +1,10 @@
+@import url('https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=ZCOOL+KuaiLe&display=swap');
 @import "tailwindcss";
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-serif: "Cormorant Garamond", serif;
+  --font-cute: "Gaegu", "ZCOOL KuaiLe", cursive;
 }
 
 @layer base {
